@@ -26,13 +26,13 @@ def main() -> None:
     app = Application.builder().token(token).build()
 
     app.add_handler(h.build_init_conversation())
-    app.add_handler(CommandHandler(["start", "help"], h.cmd_start))
     app.add_handler(CommandHandler("info", h.cmd_info))
     app.add_handler(CommandHandler("ledger", h.cmd_ledger))
     app.add_handler(CommandHandler("balance", h.cmd_balance))
     app.add_handler(CommandHandler("debt", h.cmd_debt))
     app.add_handler(CommandHandler("tally", h.cmd_tally))
     app.add_handler(CommandHandler("undo", h.cmd_undo))
+    app.add_handler(CommandHandler("end", h.cmd_end))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, h.on_text))
 
     app.run_polling(allowed_updates=["message"])

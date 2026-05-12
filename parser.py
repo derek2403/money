@@ -3,7 +3,10 @@ from __future__ import annotations
 import re
 
 NAME = r"[A-Za-z][A-Za-z0-9_]*"
-AMOUNT = r"(?P<amount>\d+(?:\.\d+)?)"
+# Optional currency code (2+ letters, any length) immediately before the
+# amount, with or without a space: e.g. "rm10", "usd 10", "myr1000",
+# "euros 50", or just "100" (uses the trip's default currency).
+AMOUNT = r"(?:(?P<currency>[A-Za-z]{2,})\s*)?(?P<amount>\d+(?:\.\d+)?)"
 SEP = r"(?:\s*,\s*|\s+and\s+)"
 
 PATTERN_EVERYONE = re.compile(
@@ -45,6 +48,10 @@ def parse_entry(text: str, joiners: list[str]) -> dict | None:
             }
         return None
 
+    def _currency(m: re.Match) -> str | None:
+        c = m.groupdict().get("currency")
+        return c.upper() if c else None
+
     m = PATTERN_EVERYONE.match(text)
     if m:
         e = err_for(m.group("payer"))
@@ -58,6 +65,7 @@ def parse_entry(text: str, joiners: list[str]) -> dict | None:
             "payer": payer,
             "debtors": debtors,
             "amount_per_debtor": float(m.group("amount")),
+            "currency": _currency(m),
         }
 
     m = PATTERN_MULTI.match(text)
@@ -74,6 +82,7 @@ def parse_entry(text: str, joiners: list[str]) -> dict | None:
             "payer": payer,
             "debtors": debtors,
             "amount_per_debtor": float(m.group("amount")),
+            "currency": _currency(m),
         }
 
     m = PATTERN_SINGLE.match(text)
@@ -95,6 +104,7 @@ def parse_entry(text: str, joiners: list[str]) -> dict | None:
             "payer": payer,
             "debtors": [debtor],
             "amount_per_debtor": float(m.group("amount")),
+            "currency": _currency(m),
         }
 
     return None
