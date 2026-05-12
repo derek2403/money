@@ -24,7 +24,7 @@ DEST, CURRENCY, NUM_JOINERS, JOINER_ALIAS, JOINER_HANDLE = range(5)
 ALIAS_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 # Telegram username: 5-32 chars, must start with a letter, letters/digits/underscores only.
 HANDLE_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{4,31}")
-ME_TOKEN_RE = re.compile(r"\bme\b", re.IGNORECASE)
+ME_TOKEN_RE = re.compile(r"\b(?:me|i)\b", re.IGNORECASE)
 
 # Aliases that would collide with the parser grammar or sentinel words.
 RESERVED_ALIASES = {"me", "everyone", "to", "and", "give", "gives", "i"}
@@ -51,6 +51,7 @@ EXAMPLES_BLOCK = (
     "  derek to jy 100\n"
     "  everyone to me 30\n"
     "  derek to jy usd 100\n"
+    "  derek and zw give jy 100"
 )
 
 
@@ -269,7 +270,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "error" in parsed:
         if has_me and not sender_alias:
             await update.message.reply_text(
-                "I don't know your alias -- 'me' only works if your Telegram "
+                "I don't know your alias -- 'me' / 'i' only work if your Telegram "
                 "handle was registered in /init. Type your alias directly, "
                 "or ask an admin to re-/init with your @handle."
             )
