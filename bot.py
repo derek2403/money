@@ -31,6 +31,7 @@ def main() -> None:
     app.add_handler(CommandHandler("ledger", h.cmd_ledger))
     app.add_handler(CommandHandler("balance", h.cmd_balance))
     app.add_handler(CommandHandler("debt", h.cmd_debt))
+    app.add_handler(CommandHandler("tally", h.cmd_tally))
     app.add_handler(CommandHandler("undo", h.cmd_undo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, h.on_text))
 

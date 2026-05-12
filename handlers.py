@@ -29,6 +29,7 @@ HELP_TEXT = (
     "  /ledger   -- show the expense ledger\n"
     "  /balance  -- show net balances per person\n"
     "  /debt <name> -- show entries where <name> is a debtor + totals owed per payer\n"
+    "  /tally    -- net all debts pairwise (final 'who pays whom' settlement)\n"
     "  /undo     -- remove the most recent entry\n"
     "  /cancel   -- cancel the current /init flow\n"
     "  /help     -- this help\n\n"
@@ -303,6 +304,54 @@ async def cmd_debt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"<b>{html.escape(name)}'s debts ({cur})</b>\n"
         f"<pre>{body}</pre>"
     )
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def cmd_tally(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    trip = db.get_trip(chat_id)
+    if not trip:
+        await update.message.reply_text("No active trip. Use /init.")
+        return
+    entries = db.list_entries(chat_id, limit=100000)
+    if not entries:
+        await update.message.reply_text("No entries yet.")
+        return
+
+    # Gross debts: (debtor, payer) -> total amount debtor owes payer
+    gross: dict[tuple[str, str], float] = {}
+    for e in entries:
+        per = e["amount_per_debtor"]
+        for d in e["debtors"]:
+            key = (d, e["payer"])
+            gross[key] = gross.get(key, 0.0) + per
+
+    # Pairwise netting: for each unordered pair {A, B}, keep only the
+    # surviving direction with the larger total.
+    net: dict[tuple[str, str], float] = {}
+    seen: set[tuple[str, str]] = set()
+    for (a, b), amt in gross.items():
+        if (a, b) in seen:
+            continue
+        opp = gross.get((b, a), 0.0)
+        diff = round(amt - opp, 2)
+        if diff > 0:
+            net[(a, b)] = diff
+        elif diff < 0:
+            net[(b, a)] = -diff
+        # diff == 0 -> debts cancel exactly, omit
+        seen.add((a, b))
+        seen.add((b, a))
+
+    if not net:
+        await update.message.reply_text("All debts cancel out -- everyone's settled.")
+        return
+
+    cur = trip["currency"]
+    lines = [f"{debtor} -> {payer} = {amt:.2f} {cur}"
+             for (debtor, payer), amt in sorted(net.items())]
+    body = html.escape("\n".join(lines))
+    text = f"<b>Net debts ({cur})</b>\n<pre>{body}</pre>"
     await update.message.reply_text(text, parse_mode="HTML")
 
 
